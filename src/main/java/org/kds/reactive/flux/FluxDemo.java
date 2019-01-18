@@ -15,7 +15,7 @@ public class FluxDemo {
     StopWatch stopWatch;
 
     public FluxDemo() {
-        countDownLatch = new CountDownLatch(5);
+        countDownLatch = new CountDownLatch(1);
         stopWatch = new StopWatch();
     }
 
@@ -76,6 +76,37 @@ public class FluxDemo {
                 }).subscribe();
     }
 
+    /**
+     * This method demonstrates the concat operation by concatenating two Flux sources
+     * The difference here is that concat operation is that resulting  stream first will have
+     * items from the first source and when it terminates , the second source will start emitting.
+     */
+    private void demoConcat() {
+        Flux<String> sFlux = Flux.just("a", "b", "c");
+        Flux<String> nFlux = Flux.just("1", "2", "3");
+
+        Flux.concat(sFlux, nFlux)
+                .subscribe( i -> log.info("Item : {}", i));
+    }
+
+    /**
+     * This method demonstrates the combineLatest operation by concatenating two Flux sources
+     * The speciality here is that the resulting stream will have item whenever the item emitted from
+     * either of the source streams, and will reuse previously emitted item , if no nee items are available
+     * as long as at least once source emits new item.
+     */
+    private void demoCombineLatest() {
+        Flux<String> sFlux = Flux.just("a", "b", "c").delayElements(Duration.ofMillis(1000));
+        Flux<String> nFlux = Flux.just("1", "2", "3").delayElements(Duration.ofMillis(500));
+
+        Flux.combineLatest(sFlux, nFlux, String::concat)
+                .collectList()
+                .doOnNext( i -> {
+                    log.info("fnConcatMap : {}", i);
+                    countDownLatch.countDown();
+                })
+                .subscribe();
+    }
 
 
     public static void main(String [] args) throws InterruptedException {
@@ -86,9 +117,13 @@ public class FluxDemo {
 
         //fluxDemo.demoMapOperation();
 
-        fluxDemo.demoFlatMapOperation();
+        //fluxDemo.demoFlatMapOperation();
 
         //fluxDemo.demoConcatMap();
+
+        //fluxDemo.demoConcat();
+
+        fluxDemo.demoCombineLatest();
 
         fluxDemo.countDownLatch.await();
 
