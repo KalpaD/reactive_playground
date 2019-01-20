@@ -15,7 +15,7 @@ public class FluxDemo {
     StopWatch stopWatch;
 
     public FluxDemo() {
-        countDownLatch = new CountDownLatch(1);
+        countDownLatch = new CountDownLatch(5);
         stopWatch = new StopWatch();
     }
 
@@ -96,7 +96,7 @@ public class FluxDemo {
      * as long as at least once source emits new item.
      */
     private void demoCombineLatest() {
-        Flux<String> sFlux = Flux.just("a", "b", "c").delayElements(Duration.ofMillis(1000));
+        Flux<String> sFlux = Flux.just("a", "b", "c", "d", "e").delayElements(Duration.ofMillis(1000));
         Flux<String> nFlux = Flux.just("1", "2", "3").delayElements(Duration.ofMillis(500));
 
         Flux.combineLatest(sFlux, nFlux, String::concat)
@@ -108,6 +108,50 @@ public class FluxDemo {
                 .subscribe();
     }
 
+    /**
+     * This method demonstrates the zip operation by zipping two Flux sources.
+     * The speciality here is that the zip emits a new item, only when each source
+     * emits a new item.
+     */
+    private void demoZip() {
+        Flux<String> nFlux = Flux.just("1", "2", "3", "4", "5").delayElements(Duration.ofMillis(1000));
+        Flux.just("a", "b", "c", "d", "e").delayElements(Duration.ofMillis(500))
+                .zipWith(nFlux, (x, y) -> x + y)
+                .doOnNext( i -> {
+                    log.info("fnZip : {}", i);
+                    countDownLatch.countDown();
+                })
+                .subscribe();
+    }
+
+    /**
+     * This method demonstrates the scan operation on even source.
+     * It applies an accumulator function over an observable sequence and returns each intermediate result.
+     */
+    private void demoScan() {
+        Flux.just("a", "b", "c", "d", "e").delayElements(Duration.ofMillis(500))
+                .scan((x, y) -> x + y)
+                .doOnNext(i -> {
+                    log.info("fnScan : {}", i);
+                    countDownLatch.countDown();
+                }).subscribe();
+    }
+
+    /**
+     * This method demonstrates the reduce operation on even source.
+     * Reduce applies a function to each item emitted by an observable, sequentially and emits the final value.
+     */
+    private void demoReduce() {
+        // set the latch to 1, since all we going to have is 1 event.
+        countDownLatch = new CountDownLatch(1);
+
+        Flux.just(1, 2, 3, 4, 5).delayElements(Duration.ofMillis(500))
+                .reduce((x, y) -> x + y)
+                .doOnNext( i -> {
+                    log.info("fnReduce : {}", i);
+                    countDownLatch.countDown();
+                }).subscribe();
+    }
 
     public static void main(String [] args) throws InterruptedException {
         FluxDemo fluxDemo = new FluxDemo();
@@ -123,7 +167,13 @@ public class FluxDemo {
 
         //fluxDemo.demoConcat();
 
-        fluxDemo.demoCombineLatest();
+        //fluxDemo.demoCombineLatest();
+
+        //fluxDemo.demoZip();
+
+        //fluxDemo.demoScan();
+
+        fluxDemo.demoReduce();
 
         fluxDemo.countDownLatch.await();
 
